@@ -11,11 +11,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
 def check_bound(obj_rct: pg.Rect) -> tuple[bool, bool]:
-    """
-    オブジェクトが画面内にあるか判定する
-    """
     yoko, tate = True, True
-
     if obj_rct.left < 0 or WIDTH < obj_rct.right:
         yoko = False
     if obj_rct.top < 0 or HEIGHT < obj_rct.bottom:
@@ -24,10 +20,6 @@ def check_bound(obj_rct: pg.Rect) -> tuple[bool, bool]:
 
 
 class Player(pg.sprite.Sprite):
-    """
-    プレイヤーに関するクラス
-    """
-
     delta = {
         pg.K_UP: (0, -1),
         pg.K_DOWN: (0, +1),
@@ -39,71 +31,25 @@ class Player(pg.sprite.Sprite):
         super().__init__()
         self.image = pg.image.load("fig/alien1.png")
         self.rect = self.image.get_rect()
-
-        # スタート位置
         self.rect.center = (50, HEIGHT//2)
-
-        # ★変更：速度設定
-        self.normal_speed = 1
-        self.dash_speed = 3
-        self.speed = self.normal_speed
-
+        self.speed = 1
         self.move_flag = False
-
-        # ★追加：スタミナ
-        self.stamina = 100
-        self.max_stamina = 100
-
-        # 足音
         self.walk_se = pg.mixer.Sound("sound/asioto.mp3")
 
     def update(self, key_lst: list[bool]):
-        """
-        プレイヤー更新
-        """
-        sum_mv = [0, 0]
-        for k, mv in __class__.delta.items():
-            if key_lst[k]:
-                sum_mv[0] += mv[0]
-                sum_mv[1] += mv[1]
-        moving = (sum_mv != [0, 0])  # ★追加：移動中判定
-        # ★追加：ダッシュ処理
-        if key_lst[pg.K_LSHIFT] and self.stamina > 0:
-            self.speed = self.dash_speed
-            self.stamina -= 1
-        else:
-            self.speed = self.normal_speed
-            if not moving:
-                self.stamina += 0.2
-
-        # ★追加：スタミナ制限
-        if self.stamina < 0:
-            self.stamina = 0
-        if self.stamina > self.max_stamina:
-            self.stamina = self.max_stamina
-
         sum_mv = [0, 0]
         for k, mv in __class__.delta.items():
             if key_lst[k]:
                 sum_mv[0] += mv[0]
                 sum_mv[1] += mv[1]
 
-        self.rect.move_ip(
-            self.speed * sum_mv[0],
-            self.speed * sum_mv[1]
-        )
+        self.rect.move_ip(self.speed*sum_mv[0], self.speed*sum_mv[1])
 
-        # 画面外判定
         if check_bound(self.rect) != (True, True):
-            self.rect.move_ip(
-                -self.speed * sum_mv[0],
-                -self.speed * sum_mv[1]
-            )
+            self.rect.move_ip(-self.speed*sum_mv[0], -self.speed*sum_mv[1])
 
-        # 移動判定
         if sum_mv != [0, 0]:
             self.move_flag = True
-
             if not self.walk_se.get_num_channels():
                 self.walk_se.play(-1)
         else:
@@ -112,46 +58,26 @@ class Player(pg.sprite.Sprite):
 
 
 class Oni(pg.sprite.Sprite):
-    """
-    鬼に関するクラス
-    """
-
     def __init__(self):
         super().__init__()
         self.image_back = pg.image.load("fig/2.png")
-        self.image_front = pg.transform.flip(
-            self.image_back,
-            True,
-            False
-        )
-
+        self.image_front = pg.transform.flip(self.image_back, True, False)
         self.image = self.image_back
         self.rect = self.image.get_rect()
-
-        # 開始時
         self.rect.center = (WIDTH-50, HEIGHT//2)
         self.look_flag = False
-
-        # 次に振り向く時間
         self.next_turn = time.time() + random.uniform(5, 15)
-
-        # 音声
         self.voice = pg.mixer.Sound("sound/sound.mp3")
         self.voice.play(-1)
 
     def update(self):
-        """
-        鬼更新
-        """
         now = time.time()
-
         if not self.look_flag:
             if now >= self.next_turn:
                 self.look_flag = True
                 self.image = self.image_front
                 self.voice.stop()
                 self.next_turn = now + 3
-
         else:
             if now >= self.next_turn:
                 self.look_flag = False
@@ -160,16 +86,7 @@ class Oni(pg.sprite.Sprite):
                 self.next_turn = now + random.uniform(5, 15)
 
 
-def draw_text(
-        screen: pg.Surface,
-        text: str,
-        size: int,
-        color: tuple[int, int, int],
-        center: tuple[int, int]
-):
-    """
-    文字表示
-    """
+def draw_text(screen, text, size, color, center):
     font = pg.font.Font(None, size)
     txt = font.render(text, True, color)
     rect = txt.get_rect()
@@ -177,25 +94,16 @@ def draw_text(
     screen.blit(txt, rect)
 
 
-def gameover(screen: pg.Surface):
+def gameover(screen):
     fonto = pg.font.Font(None, 80)
-    txt = fonto.render("Game Over", True, (255, 0, 0))
-    screen.blit(txt, [WIDTH//2-150, HEIGHT//2])
+    txt = fonto.render("Game Over", True, (255,0,0))
+    screen.blit(txt,[WIDTH//2-150,HEIGHT//2])
 
 
-def clear(screen: pg.Surface):
+def clear(screen):
     fonto = pg.font.Font(None, 80)
-    txt = fonto.render("Clear!", True, (0, 255, 0))
-    screen.blit(txt, [WIDTH//2-150, HEIGHT//2])
-
-
-# ★追加：スタミナバー表示
-def draw_stamina(screen: pg.Surface, player: Player):
-    pg.draw.rect(screen, (255, 255, 255), [20, 20, 200, 20])
-    pg.draw.rect(screen, (0, 255, 0), [20, 20, player.stamina * 2, 20])
-    pg.draw.rect(screen, (0, 0, 0), [20, 20, 200, 20], 2)
-
-    draw_text(screen, "STAMINA", 30, (255, 255, 255), (120, 55))
+    txt = fonto.render("Clear!", True, (0,255,0))
+    screen.blit(txt,[WIDTH//2-150,HEIGHT//2])
 
 
 def main():
@@ -207,6 +115,14 @@ def main():
     player = Player()
     oni = Oni()
 
+    # --- 追加：時間管理 ---
+    start_time = time.time()
+    stop_time = 0
+    cooldown_end = 0
+    STOP_DURATION = 3
+    COOLDOWN = 5
+   
+
     while True:
         key_lst = pg.key.get_pressed()
 
@@ -216,16 +132,34 @@ def main():
             if event.type == pg.KEYDOWN and event.key == pg.K_r:
                 return "restart"
 
+            # --- 時間停止スキル（スペースキー） ---
+            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                now = time.time()
+                if now >= cooldown_end:
+                    stop_time = now + STOP_DURATION
+                    cooldown_end = now + COOLDOWN
+        # ------------------------------------------------
+
         screen.blit(bg_img, [0, 0])
 
         player.update(key_lst)
-        oni.update()
+
+        # --- 鬼の停止処理 ---
+        now = time.time()
+        if now >= stop_time:
+            oni.update()
+        # ---------------------
 
         screen.blit(player.image, player.rect)
         screen.blit(oni.image, oni.rect)
 
-        # ★追加：スタミナ表示
-        draw_stamina(screen, player)
+        # --- 経過時間表示 ---
+        elapsed = int(time.time() - start_time)
+        draw_text(screen, f"Time: {elapsed}", 40, (255,255,255), (100, 30))
+
+        # --- クールタイム表示 ---
+        cd = max(0, int(cooldown_end - time.time()))
+        draw_text(screen, f"Skill CD: {cd}", 40, (255,255,0), (300, 30))
 
         # ゲームオーバー
         if oni.look_flag and player.move_flag:
